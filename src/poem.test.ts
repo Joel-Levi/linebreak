@@ -1,3 +1,4 @@
+import { deflateSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { computeReveal, decodePoem, encodePoem } from './poem';
 import { defaultConfig } from './constants';
@@ -115,5 +116,67 @@ describe('encodePoem / decodePoem', () => {
 
   it('returns null for garbage input instead of throwing', () => {
     expect(decodePoem('not valid base64 !!!')).toBeNull();
+  });
+
+  it('produces a substantially shorter link than the old keyed-JSON, uncompressed format would', () => {
+    const realisticPoem: PoemPayload = {
+      title: 'the space between words',
+      text: [
+        'the space between words',
+        'is not empty',
+        '',
+        'it holds the shape of breath',
+        'and waits for you',
+        '',
+        'read slowly',
+        'tap gently',
+        'let each line arrive',
+        'like weather',
+      ].join('\n'),
+      // most lines left at the default config, as a typical poem would be
+      lineConfigs: [
+        cfg(),
+        cfg({ mode: 'split', breakIndex: 0 }),
+        cfg(),
+        cfg({ mergeNext: true }),
+        cfg(),
+        cfg(),
+        cfg({ mode: 'word' }),
+        cfg({ mode: 'word' }),
+        cfg({ mode: 'split', breakIndex: 1 }),
+        cfg(),
+      ],
+      font: 'serif',
+      hue: 195,
+      author: '',
+      solidTheme: null,
+    };
+
+    const encoded = encodePoem(realisticPoem);
+
+    // reference: the old format — keyed JSON object, no compression
+    const oldStyleJson = JSON.stringify(realisticPoem);
+    const oldStyleEncoded = btoa(unescape(encodeURIComponent(oldStyleJson)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    expect(encoded.length).toBeLessThan(oldStyleEncoded.length * 0.7);
+  });
+
+  it('decodes gracefully when the compact payload has an out-of-range font/solidTheme index', () => {
+    // hand-build a validly-shaped compact payload with indices that don't
+    // exist (simulating stale/corrupted data), bypassing encodePoem
+    const compact = ['t', 'line one', [null], 99, 195, '', 99];
+    const json = JSON.stringify(compact);
+    const compressed = deflateSync(new TextEncoder().encode(json));
+    let binary = '';
+    for (const byte of compressed) binary += String.fromCharCode(byte);
+    const encoded = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    const decoded = decodePoem(encoded);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.font).toBe('serif');
+    expect(decoded!.solidTheme).toBeNull();
   });
 });

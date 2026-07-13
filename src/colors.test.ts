@@ -87,19 +87,36 @@ describe('makeBlobs', () => {
     expect(blobs).toHaveLength(6);
   });
 
-  it('gives the full-size style vmax units and a large blur', () => {
+  it('gives the full-size style vmax units and a soft radial-gradient glow instead of a blur filter', () => {
     for (const blob of blobs) {
       expect(blob.style.width).toMatch(/^\d+vmax$/);
-      expect(blob.style.filter).toBe('blur(60px)');
+      expect(blob.style.filter).toBeUndefined();
+      // "closest-side" (not the default farthest-corner) so a square box still
+      // fades out as a clean circle instead of bleeding solid color to the edges
+      expect(blob.style.background).toMatch(/^radial-gradient\(circle closest-side, /);
+      // the gradient must fade to a transparent version of the same color, not a hard cutoff
+      expect(blob.style.background).toMatch(/\/ 0\)\s*100%\)$/);
     }
   });
 
-  it('gives the mini style pixel units, a smaller blur, and keeps other props', () => {
+  it('gives the mini style pixel units and keeps the same gradient/animation, just smaller', () => {
     for (const blob of blobs) {
       expect(blob.miniStyle.width).toMatch(/^\d+(\.\d+)?px$/);
-      expect(blob.miniStyle.filter).toBe('blur(10px)');
+      expect(blob.miniStyle.filter).toBeUndefined();
       expect(blob.miniStyle.background).toBe(blob.style.background);
       expect(blob.miniStyle.animationName).toBe(blob.style.animationName);
+    }
+  });
+
+  it('pins the full-size blob to the viewport (fixed), not the growing page (absolute)', () => {
+    for (const blob of blobs) {
+      expect(blob.style.position).toBe('fixed');
+    }
+  });
+
+  it('keeps the mini preview-strip blob confined to its own small box (absolute)', () => {
+    for (const blob of blobs) {
+      expect(blob.miniStyle.position).toBe('absolute');
     }
   });
 });

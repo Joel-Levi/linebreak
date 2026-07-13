@@ -1,5 +1,6 @@
-import { defaultConfig } from './constants';
-import type { LineConfig, PoemPayload, Reveal, RevealLine } from './types';
+import { deflateSync, inflateSync } from 'fflate';
+import { FONT_ORDER, MODE_OPTIONS, SOLID_THEMES, defaultConfig } from './constants';
+import type { FontKey, LineConfig, PoemPayload, Reveal, RevealLine } from './types';
 
 export function computeReveal(rawLines: string[], configs: LineConfig[]): Reveal {
   let step = 0;
@@ -62,17 +63,84 @@ export function computeReveal(rawLines: string[], configs: LineConfig[]): Reveal
   return { lines: built, totalSteps: maxStep + 1 };
 }
 
+// Wire format for share links: a positional (not keyed) array — no repeated
+// `"lineConfigs":`/`"breakIndex":`-style property names — then deflated and
+// base64'd. Line configs that match the default are stored as `null` rather
+// than a full tuple, since most lines in a typical poem don't customize their
+// reveal. None of this needs to stay backward-compatible: an older link that
+// predates this format simply fails to decode and falls back to the default
+// poem (see decodePoem's catch-all below), it doesn't crash.
+const MODE_CODES = MODE_OPTIONS.map((m) => m.key);
+
+type CompactLineConfig = [number, number | null, 0 | 1] | null;
+type CompactPayload = [
+  title: string,
+  text: string,
+  lineConfigs: CompactLineConfig[],
+  fontIndex: number,
+  hue: number,
+  author: string,
+  solidThemeIndex: number, // -1 = none
+];
+
+function encodeLineConfig(cfg: LineConfig): CompactLineConfig {
+  if (cfg.mode === 'whole' && cfg.breakIndex === null && !cfg.mergeNext) return null;
+  return [MODE_CODES.indexOf(cfg.mode), cfg.breakIndex, cfg.mergeNext ? 1 : 0];
+}
+
+function decodeLineConfig(c: CompactLineConfig): LineConfig {
+  if (c === null) return defaultConfig();
+  const [modeIndex, breakIndex, merge] = c;
+  return { mode: MODE_CODES[modeIndex] ?? 'whole', breakIndex, mergeNext: merge === 1 };
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64ToBytes(str: string): Uint8Array {
+  let s = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const binary = atob(s);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 export function encodePoem(obj: PoemPayload): string {
-  const json = JSON.stringify(obj);
-  const b64 = btoa(unescape(encodeURIComponent(json)));
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const compact: CompactPayload = [
+    obj.title,
+    obj.text,
+    obj.lineConfigs.map(encodeLineConfig),
+    Math.max(0, FONT_ORDER.indexOf(obj.font)),
+    obj.hue,
+    obj.author,
+    obj.solidTheme ? SOLID_THEMES.findIndex((t) => t.id === obj.solidTheme) : -1,
+  ];
+  const json = JSON.stringify(compact);
+  const compressed = deflateSync(new TextEncoder().encode(json));
+  return bytesToBase64(compressed);
 }
 
 export function decodePoem(str: string): PoemPayload | null {
   try {
-    let s = str.replace(/-/g, '+').replace(/_/g, '/');
-    while (s.length % 4) s += '=';
-    return JSON.parse(decodeURIComponent(escape(atob(s))));
+    const compressed = base64ToBytes(str);
+    const json = new TextDecoder().decode(inflateSync(compressed));
+    const [title, text, lineConfigs, fontIndex, hue, author, solidThemeIndex] = JSON.parse(json) as CompactPayload;
+    return {
+      title,
+      text,
+      lineConfigs: lineConfigs.map(decodeLineConfig),
+      font: (FONT_ORDER[fontIndex] as FontKey | undefined) ?? 'serif',
+      hue,
+      author,
+      solidTheme: solidThemeIndex >= 0 ? (SOLID_THEMES[solidThemeIndex]?.id ?? null) : null,
+    };
   } catch {
     return null;
   }

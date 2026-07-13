@@ -51,33 +51,47 @@ export function resolveColors(hue: number, a11y: boolean, solidThemeId: string |
   return accentColors(hue, a11y);
 }
 
+// A soft-edged radial gradient reads as the same glowing blob as a blurred
+// solid circle, but is just a cheap fill for the GPU — no blur filter (an
+// expensive convolution pass) needed. Mobile GPUs in particular struggle with
+// several large, continuously-animated `filter: blur()` layers at once.
+function glow(color: string): string {
+  const transparent = color.replace(/\)\s*$/, ' / 0)');
+  return `radial-gradient(circle closest-side, ${color} 0%, ${color} 55%, ${transparent} 100%)`;
+}
+
 export function makeBlobs(colors: Colors): Blob[] {
   const defs = [
-    { top: '-25%', left: '-20%', size: 105, color: colors.c1, anim: 'lbBlobA', dur: 24 },
-    { top: '-5%', left: '45%', size: 100, color: colors.c2, anim: 'lbBlobB', dur: 29 },
-    { top: '40%', left: '-18%', size: 95, color: colors.c3, anim: 'lbBlobC', dur: 26 },
-    { top: '45%', left: '40%', size: 102, color: colors.c4, anim: 'lbBlobD', dur: 31 },
-    { top: '15%', left: '10%', size: 80, color: colors.c2, anim: 'lbBlobC', dur: 33 },
-    { top: '60%', left: '65%', size: 85, color: colors.c1, anim: 'lbBlobB', dur: 27 },
+    { top: '-25%', left: '-20%', size: 105, color: colors.c1, anim: 'lbBlobA', dur: 20 },
+    { top: '-5%', left: '45%', size: 100, color: colors.c2, anim: 'lbBlobB', dur: 24 },
+    { top: '40%', left: '-18%', size: 95, color: colors.c3, anim: 'lbBlobC', dur: 22 },
+    { top: '45%', left: '40%', size: 102, color: colors.c4, anim: 'lbBlobD', dur: 26 },
+    { top: '15%', left: '10%', size: 80, color: colors.c2, anim: 'lbBlobC', dur: 28 },
+    { top: '60%', left: '65%', size: 85, color: colors.c1, anim: 'lbBlobB', dur: 22 },
   ];
   return defs.map((d) => {
     const style: Partial<CSSStyleDeclaration> = {
-      position: 'absolute',
+      // fixed (not absolute) so the blobs are pinned to the viewport and stay
+      // put as the page grows/scrolls with a long poem, instead of being
+      // positioned against the ever-taller reader container
+      position: 'fixed',
+      zIndex: '0',
       top: d.top,
       left: d.left,
       width: `${d.size}vmax`,
       height: `${d.size}vmax`,
-      borderRadius: '50%',
-      background: d.color,
-      filter: 'blur(60px)',
+      background: glow(d.color),
       opacity: '0.9',
       animationName: d.anim,
       animationDuration: `${d.dur}s`,
+      willChange: 'transform',
       pointerEvents: 'none',
     };
     const miniStyle: Partial<CSSStyleDeclaration> = {
       ...style,
-      filter: 'blur(10px)',
+      // the editor's small preview strip still wants the blob confined to
+      // that little box, not pinned to the whole viewport
+      position: 'absolute',
       width: `${d.size * 0.5}px`,
       height: `${d.size * 0.5}px`,
     };

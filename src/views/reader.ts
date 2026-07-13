@@ -23,6 +23,7 @@ interface ReaderSession {
   afterWrap: HTMLElement | null;
   authorSignatureEl: HTMLElement | null;
   shareLinkEl: HTMLAnchorElement | null;
+  lastA11y: boolean;
 }
 
 let session: ReaderSession | null = null;
@@ -38,6 +39,17 @@ function lineStyle(font: FontKey, colors: Colors): Partial<CSSStyleDeclaration> 
     margin: '0',
     whiteSpace: 'pre-wrap',
   };
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function scrollToBottom(): void {
+  window.scrollTo({
+    top: document.documentElement.scrollHeight,
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+  });
 }
 
 function applyLineStyle(el: HTMLElement, font: FontKey, colors: Colors): void {
@@ -56,9 +68,10 @@ function insertLineNode(sess: ReaderSession, i: number, node: HTMLElement): void
   else sess.poemWrap.appendChild(node);
 }
 
-function revealNewContent(sess: ReaderSession, font: FontKey, colors: Colors): void {
+function revealNewContent(sess: ReaderSession, font: FontKey, colors: Colors): HTMLElement | null {
   const s = state;
   const wordAnim = s.a11y ? 'none' : 'lbWordIn 0.5s ease forwards';
+  let lastTouchedLine: HTMLElement | null = null;
 
   for (let i = 0; i < sess.reveal.lines.length; i++) {
     const line = sess.reveal.lines[i];
@@ -81,15 +94,18 @@ function revealNewContent(sess: ReaderSession, font: FontKey, colors: Colors): v
         const span = h('span', { style: { display: 'inline-block', animation: wordAnim } }, [w.text]);
         lineEl.appendChild(span);
         sess.wordEls[i][wi] = span;
+        lastTouchedLine = lineEl;
       }
     }
   }
+
+  return lastTouchedLine;
 }
 
-function ensureAfterSection(sess: ReaderSession, colors: Colors, font: FontKey): void {
+function ensureAfterSection(sess: ReaderSession, colors: Colors, font: FontKey): HTMLElement | null {
   const s = state;
   const allRevealed = s.revealedCount >= sess.reveal.totalSteps;
-  if (!allRevealed || sess.afterWrap) return;
+  if (!allRevealed || sess.afterWrap) return null;
 
   const afterLinksStyle: Partial<CSSStyleDeclaration> = {
     position: 'relative',
@@ -132,6 +148,7 @@ function ensureAfterSection(sess: ReaderSession, colors: Colors, font: FontKey):
   }
   sess.afterWrap = h('div', { style: afterLinksStyle, on: { click: stopClick } }, links);
   sess.rootEl.querySelector('.lb-tapzone')!.appendChild(sess.afterWrap);
+  return sess.afterWrap;
 }
 
 function applyCosmetics(sess: ReaderSession): void {
@@ -204,10 +221,10 @@ export function mountReader(container: HTMLElement): void {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     cursor: 'pointer',
     outline: 'none',
-    padding: '80px 24px',
+    padding: '110px 24px 80px',
     userSelect: 'none',
   };
 
@@ -280,7 +297,9 @@ export function mountReader(container: HTMLElement): void {
     'div',
     {
       style: {
-        position: 'absolute',
+        // fixed to the viewport (like the progress bar/tap hint), not the
+        // poem container — otherwise it scrolls out of reach on a long poem
+        position: 'fixed',
         top: '18px',
         right: '18px',
         zIndex: '3',
@@ -312,23 +331,18 @@ export function mountReader(container: HTMLElement): void {
           'div',
           {
             style: {
-              position: 'fixed',
-              top: '56px',
-              left: '0',
-              right: '0',
-              margin: '0 auto',
+              // normal in-flow element (not fixed) so it scrolls away with the
+              // poem instead of permanently overlaying whatever scrolls under it
+              position: 'relative',
               zIndex: '2',
-              width: '100%',
               maxWidth: '760px',
-              boxSizing: 'border-box',
-              padding: '0 24px',
+              marginBottom: '28px',
               fontFamily: FONT_MAP[font],
               fontWeight: '600',
               color: colors.text,
               fontSize: 'clamp(18px, 3vw, 28px)',
               textAlign: 'center',
               whiteSpace: 'pre-wrap',
-              pointerEvents: 'none',
               animation: 'lbWordIn 0.6s ease forwards',
             },
           },
@@ -378,6 +392,7 @@ export function mountReader(container: HTMLElement): void {
     afterWrap: null,
     authorSignatureEl: null,
     shareLinkEl: null,
+    lastA11y: s.a11y,
   };
 
   revealNewContent(session, font, colors);
@@ -391,9 +406,20 @@ export function updateReader(): void {
   const colors = resolveColors(s.hue, s.a11y, s.solidTheme);
   const font = s.font;
 
-  revealNewContent(session, font, colors);
-  ensureAfterSection(session, colors, font);
+  // reading mode jumps straight to the fully-revealed poem, which would
+  // otherwise look identical to "just tapped through it all" below and
+  // trigger the same scroll — but toggling a setting shouldn't yank the
+  // reader's scroll position around, so it's excluded explicitly.
+  const a11yToggled = s.a11y !== session.lastA11y;
+  session.lastA11y = s.a11y;
+
+  const touchedLine = revealNewContent(session, font, colors);
+  const newAfterWrap = ensureAfterSection(session, colors, font);
   applyCosmetics(session);
+
+  // any actual reveal (a new line/word, or the end-of-poem links appearing)
+  // scrolls to the bottom of the page, not just some renders (e.g. copy toggles)
+  if (!a11yToggled && (touchedLine || newAfterWrap)) scrollToBottom();
 }
 
 export function unmountReader(): void {

@@ -110,17 +110,18 @@ describe('state.ts initial load', () => {
     expect(state.text).toBe('hash text');
   });
 
-  it('defaults solidTheme and title to their empty values when a shared hash predates those fields', async () => {
-    // simulate an old share link encoded before solidTheme/title existed
+  it('gracefully falls back to the default poem for a hash from before the compressed/compact link format', async () => {
+    // simulates a link shared before the compression + compact-array rewrite.
+    // Old links are not expected to keep working across that change, but
+    // loading one must not crash — it should just fall through to defaults.
     const legacyPayload = { text: 'old link', lineConfigs: [], font: 'serif', hue: 195, author: '' };
     const json = JSON.stringify(legacyPayload);
     const b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     window.location.hash = '#p=' + b64;
 
     const { state } = await freshState();
-    expect(state.route).toBe('reader');
-    expect(state.solidTheme).toBeNull();
-    expect(state.title).toBe('');
+    expect(state.route).toBe('editor');
+    expect(state.text).toBe(DEFAULT_TEXT);
   });
 
   it('defaults solidTheme and title to their empty values when a saved draft predates those fields', async () => {
