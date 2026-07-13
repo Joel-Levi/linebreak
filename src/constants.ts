@@ -48,32 +48,10 @@ export const PRESET_OPTIONS: { key: Preset; label: string }[] = [
   { key: 'advanced', label: 'Advanced' },
 ];
 
-export const DEFAULT_TEXT = [
-  'the space between words',
-  'is not empty',
-  '',
-  'it holds the shape of breath',
-  'and waits for you',
-  '',
-  'read slowly',
-  'tap gently',
-  'let each line arrive',
-  'like weather',
-].join('\n');
+export const DEFAULT_TEXT = '';
 
 export function defaultConfig(): LineConfig {
   return { mode: 'whole', breakIndex: null, mergeNext: false };
 }
 
-export const DEFAULT_CONFIGS: LineConfig[] = [
-  { mode: 'whole', breakIndex: null, mergeNext: false },
-  { mode: 'split', breakIndex: 0, mergeNext: false },
-  defaultConfig(),
-  { mode: 'whole', breakIndex: null, mergeNext: true },
-  { mode: 'whole', breakIndex: null, mergeNext: false },
-  defaultConfig(),
-  { mode: 'word', breakIndex: null, mergeNext: false },
-  { mode: 'word', breakIndex: null, mergeNext: false },
-  { mode: 'split', breakIndex: 1, mergeNext: false },
-  { mode: 'whole', breakIndex: null, mergeNext: false },
-];
+export const DEFAULT_CONFIGS: LineConfig[] = [];

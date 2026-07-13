@@ -107,6 +107,8 @@ export function goPreview(e: Event): void {
 export function backToEditing(e: Event): void {
   e.preventDefault();
   state.route = 'editor';
+  // reading mode is a reader-only toggle — don't let it leak into the editor's own preview
+  state.a11y = false;
   renderApp();
 }
 
@@ -127,6 +129,7 @@ export function startNewPoem(e: Event): void {
     revealedCount: 0,
     hasLink: false,
     copied: false,
+    a11y: false,
   });
   renderApp();
 }

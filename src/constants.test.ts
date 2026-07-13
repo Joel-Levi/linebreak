@@ -44,8 +44,9 @@ describe('defaultConfig', () => {
 });
 
 describe('DEFAULT_CONFIGS / DEFAULT_TEXT alignment', () => {
-  it('has exactly one line config per line of the default poem', () => {
-    expect(DEFAULT_CONFIGS).toHaveLength(DEFAULT_TEXT.split('\n').length);
+  it('starts the poem blank, with no per-line configs to match', () => {
+    expect(DEFAULT_TEXT).toBe('');
+    expect(DEFAULT_CONFIGS).toEqual([]);
   });
 });
 

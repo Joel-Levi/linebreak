@@ -407,7 +407,8 @@ export function renderEditor(): HTMLElement {
   ]);
 
   // ---------- actions ----------
-  const generateLinkLabel = s.copied && s.hasLink ? 'copied ✓' : 'share';
+  const shared = s.copied && s.hasLink;
+  const generateLinkLabel = shared ? 'copied ✓' : 'share';
   const copyLabel = s.copied ? 'copied ✓' : 'copy';
 
   const actionsRow = h('div', { style: { display: 'flex', gap: '20px', alignItems: 'center', marginTop: '4px' } }, [
@@ -416,8 +417,25 @@ export function renderEditor(): HTMLElement {
     ]),
     h(
       'a',
-      { attrs: { href: '#' }, style: { fontSize: '15px', color: oklch(40, 0.01, 60) }, on: { click: generateLink } },
-      [generateLinkLabel],
+      {
+        className: 'lb-share-btn',
+        attrs: { href: '#' },
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#fff',
+          background: shared ? oklch(45, 0.15, 145) : oklch(20, 0.02, 60),
+          padding: '11px 22px',
+          borderRadius: '999px',
+          textDecoration: 'none',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.12)',
+        },
+        on: { click: generateLink },
+      },
+      [generateLinkLabel, shared ? null : '↗'],
     ),
   ]);
 

@@ -16,7 +16,7 @@ function initialState(): AppState {
     author: '',
     solidTheme: null,
     a11y: false,
-    revealPreset: 'advanced',
+    revealPreset: 'line',
     revealedCount: 0,
     copied: false,
     hasLink: false,

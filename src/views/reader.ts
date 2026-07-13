@@ -15,6 +15,7 @@ interface ReaderSession {
   progressFill: HTMLElement;
   tapHintEl: HTMLElement;
   titleEl: HTMLElement | null;
+  backToEditorBtn: HTMLButtonElement | null;
   a11yBtn: HTMLButtonElement;
   poemWrap: HTMLElement;
   reveal: Reveal;
@@ -178,6 +179,10 @@ function applyCosmetics(sess: ReaderSession): void {
   sess.a11yBtn.setAttribute('aria-pressed', String(s.a11y));
   sess.a11yBtn.textContent = s.a11y ? 'reading mode ✓' : 'reading mode';
 
+  if (sess.backToEditorBtn) {
+    sess.backToEditorBtn.style.color = colors.text;
+  }
+
   for (const el of sess.lineEls) {
     if (el) applyLineStyle(el, font, colors);
   }
@@ -273,6 +278,27 @@ export function mountReader(container: HTMLElement): void {
     ['tap or press space to reveal'],
   );
 
+  const backToEditorBtn = s.previewMode
+    ? (h(
+        'button',
+        {
+          style: {
+            fontSize: '12px',
+            padding: '6px 10px',
+            borderRadius: '7px',
+            border: '1px solid transparent',
+            background: 'transparent',
+            color: colors.text,
+            cursor: 'pointer',
+            opacity: '0.6',
+          },
+          attrs: { 'aria-label': 'Back to editor' },
+          on: { click: backToEditing },
+        },
+        ['← editor'],
+      ) as HTMLButtonElement)
+    : null;
+
   const a11yBtn = h(
     'button',
     {
@@ -310,7 +336,7 @@ export function mountReader(container: HTMLElement): void {
       },
       on: { click: stopClick },
     },
-    [a11yBtn],
+    [backToEditorBtn, a11yBtn],
   );
 
   const poemWrap = h('div', {
@@ -384,6 +410,7 @@ export function mountReader(container: HTMLElement): void {
     progressFill,
     tapHintEl,
     titleEl,
+    backToEditorBtn,
     a11yBtn,
     poemWrap,
     reveal,
