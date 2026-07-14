@@ -1,6 +1,7 @@
-import { makeBlobs, resolveColors } from '../colors';
+import { resolveColors } from '../colors';
 import { FONT_MAP } from '../constants';
 import { h } from '../dom';
+import { makeDecorations } from '../patterns';
 import { computeReveal } from '../poem';
 import type { Colors, FontKey, Reveal } from '../types';
 import { backToEditing, handleKeyDown, handleTap, shareThisPoem, startNewPoem, stopClick, toggleA11y } from '../actions';
@@ -10,7 +11,7 @@ const UI_FONT = 'system-ui, -apple-system, sans-serif';
 
 interface ReaderSession {
   rootEl: HTMLElement;
-  blobsWrap: HTMLElement;
+  decorWrap: HTMLElement;
   progressTrack: HTMLElement;
   progressFill: HTMLElement;
   tapHintEl: HTMLElement;
@@ -175,7 +176,7 @@ function applyCosmetics(sess: ReaderSession): void {
   const progressFrac = reveal.totalSteps > 0 ? Math.min(1, s.revealedCount / reveal.totalSteps) : 0;
 
   sess.rootEl.style.background = colors.pageBg;
-  sess.blobsWrap.style.display = s.a11y ? 'none' : 'contents';
+  sess.decorWrap.style.display = s.a11y ? 'none' : 'contents';
 
   sess.progressTrack.style.background = colors.isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.16)';
   sess.progressFill.style.background = colors.sub;
@@ -223,7 +224,7 @@ export function mountReader(container: HTMLElement): void {
   const reveal = computeReveal(rawLines, s.lineConfigs);
   const colors = resolveColors(s.hue, s.a11y, s.solidTheme);
   const font = s.font;
-  const blobs = s.solidTheme ? [] : makeBlobs(colors);
+  const decorations = makeDecorations(colors);
 
   const rootStyle: Partial<CSSStyleDeclaration> = {
     position: 'relative',
@@ -248,8 +249,8 @@ export function mountReader(container: HTMLElement): void {
     userSelect: 'none',
   };
 
-  const blobEls = blobs.map((b) => h('div', { className: 'lb-blob', style: b.style }));
-  const blobsWrap = h('div', { style: { display: s.a11y ? 'none' : 'contents' } }, blobEls);
+  const decorEls = decorations.map((d) => h('div', { className: d.className, style: d.style }));
+  const decorWrap = h('div', { style: { display: s.a11y ? 'none' : 'contents' } }, decorEls);
 
   const progressTrack = h('div', {
     style: {
@@ -400,7 +401,7 @@ export function mountReader(container: HTMLElement): void {
       focusKey: 'reader-tapzone',
       on: { click: handleTap, keydown: handleKeyDown },
     },
-    [blobsWrap, progressTrack, tapHintEl, controls, titleEl, poemWrap],
+    [decorWrap, progressTrack, tapHintEl, controls, titleEl, poemWrap],
   );
 
   const rootEl = h('div', { style: rootStyle }, [tapzone]);
@@ -420,7 +421,7 @@ export function mountReader(container: HTMLElement): void {
 
   session = {
     rootEl,
-    blobsWrap,
+    decorWrap,
     progressTrack,
     progressFill,
     tapHintEl,

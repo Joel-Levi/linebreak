@@ -1,5 +1,5 @@
-import { SOLID_THEMES } from './constants';
-import type { Blob, Colors } from './types';
+import { BACKGROUND_THEMES } from './constants';
+import type { Colors, Decoration } from './types';
 
 export function oklch(l: number, c: number, h: number): string {
   return `oklch(${l}% ${c} ${((h % 360) + 360) % 360})`;
@@ -16,6 +16,7 @@ export function accentColors(hue: number, a11y: boolean): Colors {
       text: oklch(16, 0.01, hue),
       sub: oklch(38, 0.01, hue),
       isLight: true,
+      pattern: 'blobs',
     };
   }
   return {
@@ -27,24 +28,28 @@ export function accentColors(hue: number, a11y: boolean): Colors {
     text: oklch(97, 0.015, hue),
     sub: oklch(82, 0.03, hue),
     isLight: false,
+    pattern: 'blobs',
   };
 }
 
-// Resolves the active background: a chosen solid a11y theme takes priority
-// over the animated gradient hue, falling back to it when unset/unknown.
-export function resolveColors(hue: number, a11y: boolean, solidThemeId: string | null): Colors {
-  if (solidThemeId) {
-    const theme = SOLID_THEMES.find((t) => t.id === solidThemeId);
+// Resolves the active background: a chosen theme (solid a11y or a fun
+// animated preset) takes priority over the animated gradient hue, falling
+// back to it when unset/unknown.
+export function resolveColors(hue: number, a11y: boolean, themeId: string | null): Colors {
+  if (themeId) {
+    const theme = BACKGROUND_THEMES.find((t) => t.id === themeId);
     if (theme) {
+      const [c1, c2, c3, c4] = theme.colors ?? [theme.pageBg, theme.pageBg, theme.pageBg, theme.pageBg];
       return {
-        c1: theme.pageBg,
-        c2: theme.pageBg,
-        c3: theme.pageBg,
-        c4: theme.pageBg,
+        c1,
+        c2,
+        c3,
+        c4,
         pageBg: theme.pageBg,
         text: theme.text,
         sub: theme.sub,
         isLight: theme.isLight,
+        pattern: theme.pattern,
       };
     }
   }
@@ -60,7 +65,7 @@ function glow(color: string): string {
   return `radial-gradient(circle closest-side, ${color} 0%, ${color} 55%, ${transparent} 100%)`;
 }
 
-export function makeBlobs(colors: Colors): Blob[] {
+export function makeBlobs(colors: Colors): Decoration[] {
   const defs = [
     { top: '-25%', left: '-20%', size: 105, color: colors.c1, anim: 'lbBlobA', dur: 20 },
     { top: '-5%', left: '45%', size: 100, color: colors.c2, anim: 'lbBlobB', dur: 24 },
@@ -95,6 +100,6 @@ export function makeBlobs(colors: Colors): Blob[] {
       width: `${d.size * 0.5}px`,
       height: `${d.size * 0.5}px`,
     };
-    return { style, miniStyle };
+    return { className: 'lb-blob', style, miniStyle };
   });
 }

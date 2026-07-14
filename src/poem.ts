@@ -1,5 +1,5 @@
 import { deflateSync, inflateSync } from 'fflate';
-import { FONT_ORDER, MODE_OPTIONS, SOLID_THEMES, defaultConfig } from './constants';
+import { FONT_ORDER, MODE_OPTIONS, BACKGROUND_THEMES, defaultConfig } from './constants';
 import type { FontKey, LineConfig, PoemPayload, Reveal, RevealLine } from './types';
 
 export function computeReveal(rawLines: string[], configs: LineConfig[]): Reveal {
@@ -120,7 +120,7 @@ export function encodePoem(obj: PoemPayload): string {
     Math.max(0, FONT_ORDER.indexOf(obj.font)),
     obj.hue,
     obj.author,
-    obj.solidTheme ? SOLID_THEMES.findIndex((t) => t.id === obj.solidTheme) : -1,
+    obj.solidTheme ? BACKGROUND_THEMES.findIndex((t) => t.id === obj.solidTheme) : -1,
   ];
   const json = JSON.stringify(compact);
   const compressed = deflateSync(new TextEncoder().encode(json));
@@ -139,7 +139,7 @@ export function decodePoem(str: string): PoemPayload | null {
       font: (FONT_ORDER[fontIndex] as FontKey | undefined) ?? 'serif',
       hue,
       author,
-      solidTheme: solidThemeIndex >= 0 ? (SOLID_THEMES[solidThemeIndex]?.id ?? null) : null,
+      solidTheme: solidThemeIndex >= 0 ? (BACKGROUND_THEMES[solidThemeIndex]?.id ?? null) : null,
     };
   } catch {
     return null;

@@ -8,7 +8,7 @@ import {
   HUE_OPTIONS,
   MODE_OPTIONS,
   PRESET_OPTIONS,
-  SOLID_THEMES,
+  BACKGROUND_THEMES,
   defaultConfig,
 } from './constants';
 
@@ -79,28 +79,38 @@ describe('HUE_OPTIONS', () => {
   });
 });
 
-describe('SOLID_THEMES', () => {
+describe('BACKGROUND_THEMES', () => {
   it('has unique ids and names', () => {
-    expect(new Set(SOLID_THEMES.map((t) => t.id)).size).toBe(SOLID_THEMES.length);
-    expect(new Set(SOLID_THEMES.map((t) => t.name)).size).toBe(SOLID_THEMES.length);
+    expect(new Set(BACKGROUND_THEMES.map((t) => t.id)).size).toBe(BACKGROUND_THEMES.length);
+    expect(new Set(BACKGROUND_THEMES.map((t) => t.name)).size).toBe(BACKGROUND_THEMES.length);
   });
 
   it('meets WCAG AA contrast (>=4.5:1) for main text against its background', () => {
-    for (const theme of SOLID_THEMES) {
+    for (const theme of BACKGROUND_THEMES) {
       expect(contrastRatio(theme.pageBg, theme.text)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
   it('meets WCAG AA contrast (>=4.5:1) for secondary/sub text against its background', () => {
-    for (const theme of SOLID_THEMES) {
+    for (const theme of BACKGROUND_THEMES) {
       expect(contrastRatio(theme.pageBg, theme.sub)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
   it('flags isLight consistently with the background\'s actual luminance', () => {
-    for (const theme of SOLID_THEMES) {
+    for (const theme of BACKGROUND_THEMES) {
       const isActuallyLight = relativeLuminance(hexToRgb(theme.pageBg)) > 0.5;
       expect(theme.isLight).toBe(isActuallyLight);
+    }
+  });
+
+  it('gives every animated (non-"none") theme exactly 4 accent colors', () => {
+    for (const theme of BACKGROUND_THEMES) {
+      if (theme.pattern === 'none') {
+        expect(theme.colors).toBeUndefined();
+      } else {
+        expect(theme.colors).toHaveLength(4);
+      }
     }
   });
 });

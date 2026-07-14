@@ -1,6 +1,7 @@
-import { accentColors, makeBlobs, oklch, resolveColors } from '../colors';
-import { FONT_LABELS, FONT_MAP, FONT_ORDER, HUE_OPTIONS, MODE_OPTIONS, PRESET_OPTIONS, SOLID_THEMES, defaultConfig } from '../constants';
+import { accentColors, oklch, resolveColors } from '../colors';
+import { BACKGROUND_THEMES, FONT_LABELS, FONT_MAP, FONT_ORDER, HUE_OPTIONS, MODE_OPTIONS, PRESET_OPTIONS, defaultConfig } from '../constants';
 import { h } from '../dom';
+import { makeDecorations } from '../patterns';
 import {
   copyLink,
   generateLink,
@@ -25,7 +26,7 @@ export function renderEditor(): HTMLElement {
   const s = state;
   const rawLines = s.text.split('\n');
   const colors = resolveColors(s.hue, s.a11y, s.solidTheme);
-  const blobs = s.solidTheme ? [] : makeBlobs(colors);
+  const decorations = makeDecorations(colors);
 
   const rootStyle: Partial<CSSStyleDeclaration> = {
     position: 'relative',
@@ -344,7 +345,7 @@ export function renderEditor(): HTMLElement {
     );
   });
 
-  const solidThemeOptions = SOLID_THEMES.map((theme) => {
+  const themeOptions = BACKGROUND_THEMES.map((theme) => {
     const active = s.solidTheme === theme.id;
     return h(
       'button',
@@ -374,7 +375,7 @@ export function renderEditor(): HTMLElement {
       },
     },
     [
-      ...blobs.map((b) => h('div', { className: 'lb-blob', style: b.miniStyle })),
+      ...decorations.map((d) => h('div', { className: d.className, style: d.miniStyle })),
       h(
         'div',
         {
@@ -399,7 +400,7 @@ export function renderEditor(): HTMLElement {
     h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, fontOptions),
 
     h('label', { style: labelStyleSpaced }, ['background']),
-    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [...hueOptions, ...solidThemeOptions]),
+    h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [...hueOptions, ...themeOptions]),
 
     h('label', { style: labelStyleSpaced }, ['preview']),
     combinedPreview,

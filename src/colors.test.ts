@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { accentColors, makeBlobs, oklch, resolveColors } from './colors';
-import { SOLID_THEMES } from './constants';
+import { BACKGROUND_THEMES } from './constants';
+import { makeAurora, makeConfetti, makeDecorations, makeRipple, makeStarfield } from './patterns';
 
 describe('oklch', () => {
   it('formats an oklch() CSS string', () => {
@@ -55,7 +56,7 @@ describe('resolveColors', () => {
   });
 
   it('returns a flat palette (all blob slots equal to the page background) for a known solid theme', () => {
-    const theme = SOLID_THEMES[0];
+    const theme = BACKGROUND_THEMES.find((t) => t.pattern === 'none')!;
     const colors = resolveColors(195, false, theme.id);
     expect(colors).toEqual({
       c1: theme.pageBg,
@@ -66,16 +67,51 @@ describe('resolveColors', () => {
       text: theme.text,
       sub: theme.sub,
       isLight: theme.isLight,
+      pattern: 'none',
     });
   });
 
-  it('ignores the a11y flag once a solid theme is active', () => {
-    const theme = SOLID_THEMES[0];
+  it('maps a fun theme\'s 4 accent colors into c1-c4 and carries its pattern name', () => {
+    const theme = BACKGROUND_THEMES.find((t) => t.pattern === 'aurora')!;
+    const colors = resolveColors(195, false, theme.id);
+    expect([colors.c1, colors.c2, colors.c3, colors.c4]).toEqual(theme.colors);
+    expect(colors.pattern).toBe('aurora');
+  });
+
+  it('ignores the a11y flag once a special theme is active', () => {
+    const theme = BACKGROUND_THEMES[0];
     expect(resolveColors(195, true, theme.id)).toEqual(resolveColors(195, false, theme.id));
   });
 
   it('falls back to the gradient palette for an unrecognized theme id', () => {
     expect(resolveColors(195, false, 'not-a-real-theme')).toEqual(accentColors(195, false));
+  });
+});
+
+describe('makeDecorations', () => {
+  it('dispatches to blobs for the gradient hue pattern', () => {
+    const colors = accentColors(195, false);
+    expect(makeDecorations(colors)).toEqual(makeBlobs(colors));
+  });
+
+  it('returns nothing for a flat (non-animated) solid theme', () => {
+    const theme = BACKGROUND_THEMES.find((t) => t.pattern === 'none')!;
+    const colors = resolveColors(195, false, theme.id);
+    expect(makeDecorations(colors)).toEqual([]);
+  });
+
+  it('dispatches each fun theme to its own generator', () => {
+    const cases: [string, (c: ReturnType<typeof resolveColors>) => unknown][] = [
+      ['aurora', makeAurora],
+      ['starfield', makeStarfield],
+      ['confetti', makeConfetti],
+      ['ripple', makeRipple],
+    ];
+    for (const [pattern, generator] of cases) {
+      const theme = BACKGROUND_THEMES.find((t) => t.pattern === pattern)!;
+      const colors = resolveColors(195, false, theme.id);
+      expect(makeDecorations(colors).length).toBe((generator(colors) as unknown[]).length);
+    }
   });
 });
 
