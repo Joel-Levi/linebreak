@@ -284,8 +284,7 @@ export function renderEditor(): HTMLElement {
   ]);
 
   // ---------- font / color card ----------
-  const firstNonBlank = rawLines.map((l) => l.trim()).find((l) => l !== '');
-  const fontPreviewText = firstNonBlank || 'the space between words';
+  const fontPreviewText = 'your text will look like this';
 
   const fontOptions = FONT_ORDER.map((f) => {
     const active = s.font === f;
