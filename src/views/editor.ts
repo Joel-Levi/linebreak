@@ -91,7 +91,7 @@ export function renderEditor(): HTMLElement {
     fontSize: '15px',
     lineHeight: '1.6',
     resize: 'vertical',
-    fontFamily: FONT_MAP[s.font],
+    fontFamily: UI_FONT,
     color: oklch(20, 0.02, 60),
     outline: 'none',
   };
