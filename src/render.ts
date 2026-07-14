@@ -13,35 +13,37 @@ export function mount(container: HTMLElement): void {
 function rebuildEditorWithFocusPreserved(): void {
   const container = root!;
   const active = document.activeElement as HTMLElement | null;
-  let focusKey: string | null = null;
-  let selStart: number | null = null;
-  let selEnd: number | null = null;
-  let scrollTop: number | null = null;
+  const focusKey = active && container.contains(active) ? active.dataset?.focusKey : undefined;
 
-  if (active && container.contains(active) && active.dataset && active.dataset.focusKey) {
-    focusKey = active.dataset.focusKey;
-    if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
-      selStart = active.selectionStart;
-      selEnd = active.selectionEnd;
-      if (active instanceof HTMLTextAreaElement) scrollTop = active.scrollTop;
+  // Built off-screen — doesn't touch the live DOM yet, so the currently
+  // focused input (if any) is still untouched at this point.
+  const newTree = renderEditor();
+
+  let preserved: HTMLElement | null = null;
+  if (focusKey) {
+    const placeholder = newTree.querySelector(`[data-focus-key="${focusKey}"]`) as HTMLElement | null;
+    if (placeholder && active) {
+      // Move the SAME live node into the new tree in place of its freshly
+      // built placeholder, instead of creating a brand-new element and
+      // copying value/selection onto it. Reparenting still blurs it (tested:
+      // it does), so focus is restored below regardless — but keeping the
+      // actual node (rather than a fresh clone) preserves things a brand-new
+      // element wouldn't: undo history, and it's the more correct general
+      // practice for avoiding mobile IME/autocorrect disruption than
+      // recreating the element outright.
+      placeholder.replaceWith(active);
+      preserved = active;
     }
   }
 
   container.innerHTML = '';
-  container.appendChild(renderEditor());
+  container.appendChild(newTree);
 
-  if (focusKey) {
-    const restored = container.querySelector(`[data-focus-key="${focusKey}"]`) as HTMLElement | null;
-    if (restored) {
-      restored.focus();
-      if (
-        (restored instanceof HTMLTextAreaElement || restored instanceof HTMLInputElement) &&
-        selStart != null &&
-        selEnd != null
-      ) {
-        restored.setSelectionRange(selStart, selEnd);
-      }
-      if (restored instanceof HTMLTextAreaElement && scrollTop != null) restored.scrollTop = scrollTop;
+  if (preserved) {
+    preserved.focus();
+    if (preserved instanceof HTMLTextAreaElement || preserved instanceof HTMLInputElement) {
+      const { selectionStart, selectionEnd } = preserved;
+      if (selectionStart != null && selectionEnd != null) preserved.setSelectionRange(selectionStart, selectionEnd);
     }
   }
 }
