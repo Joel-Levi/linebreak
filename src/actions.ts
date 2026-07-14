@@ -17,7 +17,7 @@ function updatePoem(patch: Partial<PoemPayload>): void {
 // fields themselves are still updated instantly below (so clicking
 // preview/share mid-keystroke always sees the latest text); only the costly
 // render + localStorage write are debounced until typing actually pauses.
-const TEXT_INPUT_RENDER_DELAY = 500;
+const TEXT_INPUT_RENDER_DELAY = 1000;
 let pendingRenderTimer: ReturnType<typeof setTimeout> | undefined;
 
 function scheduleDebouncedRender(): void {
