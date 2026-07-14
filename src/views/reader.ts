@@ -84,17 +84,32 @@ function revealNewContent(sess: ReaderSession, font: FontKey, colors: Colors): H
       const node = h('div', { style: lineStyle(font, colors), attrs: { 'data-line': String(i) } });
       insertLineNode(sess, i, node);
       sess.lineEls[i] = node;
-      sess.wordEls[i] = new Array(line.words.length).fill(null);
+
+      // Create every word span up front — including ones not revealed yet —
+      // hidden via visibility (which still reserves their layout space,
+      // unlike display:none). This way the line's rendered width is already
+      // final the moment it appears, so revealing more words later never
+      // resizes the box — which, centered in a flex column, is what made
+      // already-visible words visibly jump sideways as each new word arrived.
+      sess.wordEls[i] = line.words.map((w) =>
+        h('span', { style: { display: 'inline-block', opacity: '0', visibility: 'hidden' } }, [w.text]),
+      );
+      sess.wordEls[i].forEach((span) => node.appendChild(span!));
     }
 
     const lineEl = sess.lineEls[i]!;
     for (let wi = 0; wi < line.words.length; wi++) {
-      if (sess.wordEls[i][wi]) continue;
+      const span = sess.wordEls[i][wi]!;
+      if (span.dataset.revealed) continue;
       const w = line.words[wi];
       if (w.step < s.revealedCount) {
-        const span = h('span', { style: { display: 'inline-block', animation: wordAnim } }, [w.text]);
-        lineEl.appendChild(span);
-        sess.wordEls[i][wi] = span;
+        span.dataset.revealed = '1';
+        span.style.visibility = 'visible';
+        if (s.a11y) {
+          span.style.opacity = '1';
+        } else {
+          span.style.animation = wordAnim;
+        }
         lastTouchedLine = lineEl;
       }
     }

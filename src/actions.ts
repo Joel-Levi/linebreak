@@ -11,18 +11,39 @@ function updatePoem(patch: Partial<PoemPayload>): void {
   renderApp();
 }
 
+// Typing fires on every keystroke, and a render here rebuilds the whole
+// editor (font/hue swatches, the animated preview, advanced per-line rows —
+// all of it), which is expensive enough to visibly lag on mobile. The state
+// fields themselves are still updated instantly below (so clicking
+// preview/share mid-keystroke always sees the latest text); only the costly
+// render + localStorage write are debounced until typing actually pauses.
+const TEXT_INPUT_RENDER_DELAY = 150;
+let pendingRenderTimer: ReturnType<typeof setTimeout> | undefined;
+
+function scheduleDebouncedRender(): void {
+  state.hasLink = false;
+  if (pendingRenderTimer !== undefined) clearTimeout(pendingRenderTimer);
+  pendingRenderTimer = setTimeout(() => {
+    pendingRenderTimer = undefined;
+    persist(state);
+    renderApp();
+  }, TEXT_INPUT_RENDER_DELAY);
+}
+
 export function handleTextChange(value: string): void {
-  const lines = value.split('\n');
-  const lineConfigs = lines.map((_, i) => state.lineConfigs[i] || defaultConfig());
-  updatePoem({ text: value, lineConfigs });
+  state.text = value;
+  state.lineConfigs = value.split('\n').map((_, i) => state.lineConfigs[i] || defaultConfig());
+  scheduleDebouncedRender();
 }
 
 export function handleAuthorChange(value: string): void {
-  updatePoem({ author: value });
+  state.author = value;
+  scheduleDebouncedRender();
 }
 
 export function handleTitleChange(value: string): void {
-  updatePoem({ title: value });
+  state.title = value;
+  scheduleDebouncedRender();
 }
 
 export function setLineMode(i: number, mode: RevealMode): void {
